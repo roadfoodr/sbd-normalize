@@ -7,6 +7,9 @@ Created on Thu Oct  6 13:48:40 2022
 
 import requests
 from bs4 import BeautifulSoup
+import pandas as pd
+import re
+from collections import namedtuple
 
 PAGE_URL = 'https://fantasyindex.com/2022/10/04/podcast/october-4-episode-of-the-fantasy-index-podcast'
 
@@ -28,17 +31,26 @@ pagetext = pagetext.replace('\\', '')  # need the double backslash to escape the
 
 soup = BeautifulSoup(pagetext, features='lxml')
 
+
 # %% Extract desired elements
-litags = soup.find_all('li')
-litags_text = [tag.text for tag in litags]
+tagdict = {'id': ('li', lambda tag: tag['id']),
+           'name': ('strong', lambda tag: tag.text),
+           # https://regex101.com/r/ZxmxR9/1
+           'location': ('h3', 
+                        lambda tag: re.search(r'\((.*?)\)', tag.text).group(1)),
+           'submission': ('p', lambda tag: tag.text),
+           'time': ('h5', lambda tag: tag.text),
+           }
 
-ids = [tag['id'] for tag in litags]
+df = pd.DataFrame(columns=tagdict.keys())
 
-ptags = soup.find_all('p')
-submissions = [tag.text for tag in ptags]
+Tagspec = namedtuple("Tagspec", "tag tagfunc")
+for key, vals in tagdict.items():
+    tagspec = Tagspec(*vals)
+    df[key] = pd.Series(map(tagspec.tagfunc, 
+                            soup.find_all(tagspec.tag)))
+    
+    
 
-strongtags = soup.find_all('strong')
-names = [tag.text for tag in strongtags]
 
-h5tags = soup.find_all('h5')
-times = [tag.text for tag in h5tags]
+

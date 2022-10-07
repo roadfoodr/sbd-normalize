@@ -87,18 +87,28 @@ for i, choices in enumerate(WEEK_CHOICES):
     df[f'pick_{i+1}'] = pd.Series(result[0] if result else None for result in choice_results)
     df[f'match_{i+1}'] = pd.Series(result[1] if result else None for result in choice_results)
 
-df.sort_values(by=[f'pick_{i}' for i in range(1, len(WEEK_CHOICES)+1)], inplace=True)
+
+# %% enumerate possible choice combos and add combo id to df
+combos = itertools.product(*WEEK_CHOICES)
+combo_dict = {combo:i+1 for i, combo in enumerate(combos)}
+
+df['combo'] = pd.Series(
+    zip(*[df[f'pick_{i}'] for i in range(1, len(WEEK_CHOICES)+1)]))
+
+df['combo_id'] = df['combo'].map(combo_dict)
 
 # %% Export to spreadsheet
 
 export_cols = (['id', 'name', 'location']
                + [f'pick_{i}' for i in range(1, len(WEEK_CHOICES)+1)]
-               + ['submission', 'time'])
+               + ['combo_id', 'submission', 'time'])
 
 # https://stackoverflow.com/questions/17326973/is-there-a-way-to-auto-adjust-excel-column-widths-with-pandas-excelwriter
 writer = pd.ExcelWriter(f'sbd_w{WEEK_NUM}_{YEAR}.xlsx')
 
 df_export = df[export_cols]
+df_export.sort_values(by='combo_id', inplace=True)
+
 df_export.to_excel(writer, sheet_name='submissions', index=False, na_rep='')
 
 for column in df_export:

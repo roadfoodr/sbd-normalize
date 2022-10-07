@@ -13,6 +13,7 @@ from collections import namedtuple
 from thefuzz import fuzz
 from thefuzz import process
 
+YEAR = 2022
 WEEK_NUM = 5
 WEEK_URL = 'https://fantasyindex.com/2022/10/04/podcast/october-4-episode-of-the-fantasy-index-podcast'
 
@@ -63,7 +64,7 @@ for key, vals in tagdict.items():
     df[key] = pd.Series(map(tagspec.tagfunc, 
                             soup.find_all(tagspec.tag)))
 
-# %%
+# %% Populate dataframe with matched choices
 # https://stackoverflow.com/questions/17740833/checking-fuzzy-approximate-substring-existing-in-a-longer-string-in-python
 # TODO: identify when there is a tie score among top matches
 match_threshold = 51
@@ -87,3 +88,22 @@ for i, choices in enumerate(WEEK_CHOICES):
     df[f'match_{i+1}'] = pd.Series(result[1] if result else None for result in choice_results)
 
 df.sort_values(by=[f'pick_{i}' for i in range(1, len(WEEK_CHOICES)+1)], inplace=True)
+
+# %% Export to spreadsheet
+
+export_cols = (['id', 'name', 'location']
+               + [f'pick_{i}' for i in range(1, len(WEEK_CHOICES)+1)]
+               + ['submission', 'time'])
+
+# https://stackoverflow.com/questions/17326973/is-there-a-way-to-auto-adjust-excel-column-widths-with-pandas-excelwriter
+writer = pd.ExcelWriter(f'sbd_w{WEEK_NUM}_{YEAR}.xlsx')
+
+df_export = df[export_cols]
+df_export.to_excel(writer, sheet_name='submissions', index=False, na_rep='')
+
+for column in df_export:
+    column_length = max(df_export[column].astype(str).map(len).max(), len(column))
+    col_idx = df_export.columns.get_loc(column)
+    writer.sheets['submissions'].set_column(col_idx, col_idx, column_length)
+
+writer.save()

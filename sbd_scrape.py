@@ -10,6 +10,8 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import re
 from collections import namedtuple
+from thefuzz import fuzz
+from thefuzz import process
 
 WEEK_NUM = 5
 WEEK_URL = 'https://fantasyindex.com/2022/10/04/podcast/october-4-episode-of-the-fantasy-index-podcast'
@@ -61,44 +63,27 @@ for key, vals in tagdict.items():
     df[key] = pd.Series(map(tagspec.tagfunc, 
                             soup.find_all(tagspec.tag)))
 
-
 # %%
-
 # https://stackoverflow.com/questions/17740833/checking-fuzzy-approximate-substring-existing-in-a-longer-string-in-python
-from thefuzz import fuzz
-from thefuzz import process
+# TODO: identify when there is a tie score among top matches
+match_threshold = 51
 
-ls = df.iloc[16]['submission']
-# qs = WEEK_CHOICES[3][0]
-# qs2 = WEEK_CHOICES[3][2]
-threshold = 1
+for i, choices in enumerate(WEEK_CHOICES):
+    choice_results = []
+    ordered = []
+    for submission in df['submission']:
+        # NOTE: if the choices are strings representing an ordered list, then
+        # scorer=fuzz.partial_ratio performs better.  Else the default
+        # scorer=fuzz.WRatio is best.
+        ordered_choice = any(',' in choice for choice in choices)
+        # ordered.append(ordered_choice)
+        res = process.extractOne(submission, 
+                                 choices, 
+                                 score_cutoff=match_threshold, 
+                                 scorer=fuzz.partial_ratio if ordered_choice else fuzz.WRatio,
+                                 )
+        choice_results.append(res)
+    df[f'pick_{i+1}'] = pd.Series(result[0] if result else None for result in choice_results)
+    df[f'match_{i+1}'] = pd.Series(result[1] if result else None for result in choice_results)
 
-# results = process.extractBests(qs, (ls,), score_cutoff=threshold, scorer=fuzz.partial_ratio)
-# results2 = process.extractBests(qs2, (ls,), score_cutoff=threshold, scorer=fuzz.partial_ratio)
-
-# print(qs, results[0][1])
-# print(qs2, results2[0][1])
-
-choices = WEEK_CHOICES[3]
-# NOTE: if the choices are strings representing an ordered list, then
-# scorer=fuzz.partial_ratio performs better.  Else the default
-# scorer=fuzz.WRatio is best.
-# ordered_choice = any(',' in choice for choice in choices)
-
-for qs in choices:
-    ordered_choice = (',' in qs)
-    res = process.extractOne(qs, 
-                             (ls,), 
-                             score_cutoff=threshold, 
-                             scorer=fuzz.partial_ratio if ordered_choice else fuzz.WRatio,
-                             )
-    print(qs, res[1])
-print('====')
-
-res2 = process.extractOne(ls, 
-                          choices, 
-                          score_cutoff=threshold, 
-                          scorer=fuzz.partial_ratio if ordered_choice else fuzz.WRatio,
-                          )
-print(res2)
-
+df.sort_values(by=[f'pick_{i}' for i in range(1, len(WEEK_CHOICES)+1)], inplace=True)

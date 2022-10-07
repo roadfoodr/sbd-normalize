@@ -97,6 +97,11 @@ df['combo'] = pd.Series(
 
 df['combo_id'] = df['combo'].map(combo_dict)
 
+df_combo = pd.DataFrame.from_dict(combo_dict, orient='index',
+                                  columns=['combo_id']).reset_index()
+df_combo.columns = ['combo', 'combo_id']
+df_combo = df_combo[['combo_id', 'combo']]
+
 # %% Export to spreadsheet
 
 export_cols = (['id', 'name', 'location']
@@ -106,14 +111,19 @@ export_cols = (['id', 'name', 'location']
 # https://stackoverflow.com/questions/17326973/is-there-a-way-to-auto-adjust-excel-column-widths-with-pandas-excelwriter
 writer = pd.ExcelWriter(f'sbd_w{WEEK_NUM}_{YEAR}.xlsx')
 
-df_export = df[export_cols]
+df_export = df[export_cols].copy()
 df_export.sort_values(by='combo_id', inplace=True)
 
 df_export.to_excel(writer, sheet_name='submissions', index=False, na_rep='')
-
 for column in df_export:
     column_length = max(df_export[column].astype(str).map(len).max(), len(column))
     col_idx = df_export.columns.get_loc(column)
     writer.sheets['submissions'].set_column(col_idx, col_idx, column_length)
+
+df_combo.to_excel(writer, sheet_name='combos', index=False, na_rep='')
+for column in df_combo:
+    column_length = max(df_combo[column].astype(str).map(len).max(), len(column))
+    col_idx = df_combo.columns.get_loc(column)
+    writer.sheets['combos'].set_column(col_idx, col_idx, column_length)
 
 writer.save()

@@ -88,6 +88,12 @@ for i, choices in enumerate(WEEK_CHOICES):
     df[f'match_{i+1}'] = pd.Series(result[1] if result else None for result in choice_results)
 
 
+# %% construct dataframe with choice options
+df_choices = pd.DataFrame()
+for i, choices in enumerate(WEEK_CHOICES):
+    df_choices = pd.concat([df_choices, pd.DataFrame(
+        {f'choice_{i+1}': choices})], axis=1)
+
 # %% enumerate possible choice combos and add combo id to df
 combos = itertools.product(*WEEK_CHOICES)
 combo_dict = {combo:i+1 for i, combo in enumerate(combos)}
@@ -119,6 +125,12 @@ for column in df_export:
     column_length = max(df_export[column].astype(str).map(len).max(), len(column))
     col_idx = df_export.columns.get_loc(column)
     writer.sheets['submissions'].set_column(col_idx, col_idx, column_length)
+
+df_choices.to_excel(writer, sheet_name='weekly choices', index=False, na_rep='')
+for column in df_choices:
+    column_length = max(df_choices[column].astype(str).map(len).max(), len(column))
+    col_idx = df_choices.columns.get_loc(column)
+    writer.sheets['weekly choices'].set_column(col_idx, col_idx, column_length)
 
 df_combo.to_excel(writer, sheet_name='combos', index=False, na_rep='')
 for column in df_combo:

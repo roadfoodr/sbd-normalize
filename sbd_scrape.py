@@ -108,6 +108,10 @@ df_combo = pd.DataFrame.from_dict(combo_dict, orient='index',
 df_combo.columns = ['combo', 'combo_id']
 df_combo = df_combo[['combo_id', 'combo']]
 
+combo_choice_cols = [f'choice_{i}' for i in range(1, len(WEEK_CHOICES)+1)]
+df_combo[combo_choice_cols] = pd.DataFrame(df_combo['combo'].tolist(), 
+                                           index= df_combo.index)
+
 # %% Export to spreadsheet
 
 export_cols = (['id', 'name', 'location']

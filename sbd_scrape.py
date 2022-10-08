@@ -47,11 +47,15 @@ soup = BeautifulSoup(pagetext, features='lxml')
 
 
 # %% Extract desired elements
+
+# https://regex101.com/r/ZxmxR9/1
+def extract_parens(tag):
+    res = re.search(r'\((.*?)\)', tag.text)
+    return res.group(1) if res else ''
+    
 tagdict = {'id': ('li', lambda tag: tag['id']),
            'name': ('strong', lambda tag: tag.text),
-           # https://regex101.com/r/ZxmxR9/1
-           'location': ('h3', 
-                        lambda tag: re.search(r'\((.*?)\)', tag.text).group(1)),
+           'location': ('h3', extract_parens),
            'submission': ('p', lambda tag: tag.text),
            'time': ('h5', lambda tag: tag.text),
            }
@@ -113,7 +117,6 @@ df_combo[combo_choice_cols] = pd.DataFrame(df_combo['combo'].tolist(),
                                            index= df_combo.index)
 
 # %% Export to spreadsheet
-
 export_cols = (['id', 'name', 'location']
                + [f'pick_{i}' for i in range(1, len(WEEK_CHOICES)+1)]
                + ['combo_id', 'submission', 'time'])

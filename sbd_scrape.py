@@ -10,23 +10,31 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import re
 from collections import namedtuple
+import itertools
 from thefuzz import fuzz
 from thefuzz import process
 
 YEAR = 2022
-WEEK_NUM = 5
-WEEK_URL = 'https://fantasyindex.com/2022/10/04/podcast/october-4-episode-of-the-fantasy-index-podcast'
+# WEEK_NUM = 5
+# WEEK_URL = 'https://fantasyindex.com/2022/10/04/podcast/october-4-episode-of-the-fantasy-index-podcast'
+WEEK_NUM = 6
+WEEK_URL = 'https://fantasyindex.com/2022/10/11/podcast/october-11-episode-of-the-fantasy-index-podcast'
 
-# permutations needed for week 5 only
-import itertools
-choice_perms = itertools.permutations(
-    ("Davante Adams", "Ja'Marr Chase", "Tee Higgins"))
-choice4 = tuple(', '.join(perm) for perm in choice_perms)
+# # permutations needed for week 5 only
+# choice_perms = itertools.permutations(
+#     ("Davante Adams", "Ja'Marr Chase", "Tee Higgins"))
+# choice4 = tuple(', '.join(perm) for perm in choice_perms)
 
-WEEK_CHOICES = [('Jared Goff', 'Zach Wilson'),
-                ('Najee Harris', 'Devin Singletary'),
-                ('Mark Andrews', 'Travis Kelce'),
-                choice4]
+# WEEK_CHOICES = [('Jared Goff', 'Zach Wilson'),
+#                 ('Najee Harris', 'Devin Singletary'),
+#                 ('Mark Andrews', 'Travis Kelce'),
+#                 choice4]
+WEEK_CHOICES = [('Daniel Jones', 'Trevor Lawrence'),
+                ('Mark Andrews', 'Taysom Hill'),
+                ('Gerald Everett', 'David Njoku'),
+                ('Mo Alie-Cox', 'Tyler Conklin'),
+                ('Lamar Jackson', 'Patrick Mahomes'),
+                ]
 
 # %% Obtain page and convert to BeautifulSoup object
 # Note: we are directly scraping input to a js function rather than the rendered html itself

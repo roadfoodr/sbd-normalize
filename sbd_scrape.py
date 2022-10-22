@@ -17,24 +17,11 @@ from thefuzz import process
 YEAR = 2022
 # WEEK_NUM = 5
 # WEEK_URL = 'https://fantasyindex.com/2022/10/04/podcast/october-4-episode-of-the-fantasy-index-podcast'
-WEEK_NUM = 6
-WEEK_URL = 'https://fantasyindex.com/2022/10/11/podcast/october-11-episode-of-the-fantasy-index-podcast'
+# WEEK_NUM = 6
+# WEEK_URL = 'https://fantasyindex.com/2022/10/11/podcast/october-11-episode-of-the-fantasy-index-podcast'
+WEEK_NUM = 7
+WEEK_URL = 'https://fantasyindex.com/2022/10/18/podcast/october-18-episode-of-the-fantasy-index-podcast'
 
-# # permutations needed for week 5 only
-# choice_perms = itertools.permutations(
-#     ("Davante Adams", "Ja'Marr Chase", "Tee Higgins"))
-# choice4 = tuple(', '.join(perm) for perm in choice_perms)
-
-# WEEK_CHOICES = [('Jared Goff', 'Zach Wilson'),
-#                 ('Najee Harris', 'Devin Singletary'),
-#                 ('Mark Andrews', 'Travis Kelce'),
-#                 choice4]
-WEEK_CHOICES = [('Daniel Jones', 'Trevor Lawrence'),
-                ('Mark Andrews', 'Taysom Hill'),
-                ('Gerald Everett', 'David Njoku'),
-                ('Mo Alie-Cox', 'Tyler Conklin'),
-                ('Lamar Jackson', 'Patrick Mahomes'),
-                ]
 
 # %% Obtain page and convert to BeautifulSoup object
 # Note: we are directly scraping input to a js function rather than the rendered html itself
@@ -75,6 +62,23 @@ for key, vals in tagdict.items():
     tagspec = Tagspec(*vals)
     df[key] = pd.Series(map(tagspec.tagfunc, 
                             soup.find_all(tagspec.tag)))
+
+# %% Attempt to extract weekly choices from first comment
+choicecomment = df[(df['name'] == 'Justin Eleff')
+                      & (df['submission'].str.lower().str.replace(
+                          ' ','').str.contains('-or-'))].iloc[0]['submission']
+choicecomment = choicecomment.replace('- OR -', '-or-')
+choicecomment = choicecomment.replace('- or -', '-or-')
+choicecomment = choicecomment.replace('-OR-', '-or-')
+choicecomment = choicecomment.split(':')[-1]
+choicecomment = choicecomment.replace(' and ', '').strip()
+
+choicerows = choicecomment.split(';')
+# https://regex101.com/r/8efiNw/1
+choicerows = [re.sub(r'\([^)]*\)', '', row).strip() for row in choicerows]
+choicerows = [row.split('-or-') for row in choicerows]
+
+WEEK_CHOICES = [(row[0].strip(), row[1].strip()) for row in choicerows]
 
 # %% Populate dataframe with matched choices
 # https://stackoverflow.com/questions/17740833/checking-fuzzy-approximate-substring-existing-in-a-longer-string-in-python

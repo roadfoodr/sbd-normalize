@@ -13,6 +13,7 @@ from collections import namedtuple
 import itertools
 from thefuzz import fuzz
 from thefuzz import process
+import warnings
 
 # YEAR = 2022
 # WEEK_NUM = 5
@@ -47,13 +48,13 @@ soup = BeautifulSoup(pagetext, features='lxml')
 # %% Extract desired elements
 
 # https://regex101.com/r/ZxmxR9/1
-def extract_parens(tag):
+def extract_paren(tag):
     res = re.search(r'\((.*?)\)', tag.text)
     return res.group(1) if res else ''
     
 tagdict = {'id': ('li', lambda tag: tag['id']),
            'name': ('strong', lambda tag: tag.text),
-           'location': ('h3', extract_parens),
+           'location': ('h3', extract_paren),
            'submission': ('p', lambda tag: tag.text),
            'time': ('h5', lambda tag: tag.text),
            }
@@ -77,11 +78,23 @@ choicecomment = choicecomment.split(':')[-1]
 choicecomment = choicecomment.replace(' and ', '').strip()
 
 choicerows = choicecomment.split(';')
+
+def extract_parens(tag):
+    res = re.findall(r'\((.*?)\)', tag)
+    return tuple(res)
+week_hosts = [extract_parens(row) for row in choicerows]
+
 # https://regex101.com/r/8efiNw/1
 choicerows = [re.sub(r'\([^)]*\)', '', row).strip() for row in choicerows]
 choicerows = [row.split('-or-') for row in choicerows]
 
-WEEK_CHOICES = [(row[0].strip(), row[1].strip()) for row in choicerows]
+# choices that do not involve exactly two options will have to be built manually
+# TODO: check for a _corrected .xlsx and read choices (and partial rows) from it
+WEEK_CHOICES = [(row[0].strip(), row[1].strip()) for row in choicerows 
+                if (len(row) == 2) ]
+
+if len(WEEK_CHOICES) < len (choicerows):
+    warnings.warn("Some choices were unable to be parsed and must be built manually.")
 
 # %% Populate dataframe with matched choices
 # https://stackoverflow.com/questions/17740833/checking-fuzzy-approximate-substring-existing-in-a-longer-string-in-python
@@ -110,6 +123,8 @@ df_choices = pd.DataFrame()
 for i, choices in enumerate(WEEK_CHOICES):
     df_choices = pd.concat([df_choices, pd.DataFrame(
         {f'choice_{i+1}': choices})], axis=1)
+    df_choices = pd.concat([df_choices, pd.DataFrame(
+        {f'host_{i+1}': week_hosts[i]})], axis=1)
 
 # %% enumerate possible choice combos and add combo id to df
 combos = itertools.product(*WEEK_CHOICES)

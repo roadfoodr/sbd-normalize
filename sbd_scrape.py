@@ -14,18 +14,22 @@ import itertools
 from thefuzz import fuzz
 from thefuzz import process
 
-YEAR = 2022
+# YEAR = 2022
 # WEEK_NUM = 5
 # WEEK_URL = 'https://fantasyindex.com/2022/10/04/podcast/october-4-episode-of-the-fantasy-index-podcast'
 # WEEK_NUM = 6
 # WEEK_URL = 'https://fantasyindex.com/2022/10/11/podcast/october-11-episode-of-the-fantasy-index-podcast'
 WEEK_NUM = 7
 WEEK_URL = 'https://fantasyindex.com/2022/10/18/podcast/october-18-episode-of-the-fantasy-index-podcast'
-
+date_res = re.search(r'https:\/\/fantasyindex\.com\/(\d+)\/(\d+)\/(\d+)\/.*', 
+                     WEEK_URL)
+if date_res:
+    YEAR, MONTH, DAY = date_res.group(1), date_res.group(2), date_res.group(3)
+else:
+    raise ValueError("Date not found in URL")
 
 # %% Obtain page and convert to BeautifulSoup object
 # Note: we are directly scraping input to a js function rather than the rendered html itself
-
 page = requests.get(f'{WEEK_URL}/comments.js')
 
 # need to do some pre-processing to make the js input parameter look more like html
@@ -39,7 +43,6 @@ pagetext = pagetext.replace(r'\n', ' ')
 pagetext = pagetext.replace('\\', '')  # need the double backslash to escape the actual backslash
 
 soup = BeautifulSoup(pagetext, features='lxml')
-
 
 # %% Extract desired elements
 

@@ -13,6 +13,7 @@ from collections import namedtuple
 import itertools
 from thefuzz import fuzz
 from thefuzz import process
+import os.path
 import warnings
 
 DATA_DIR = './data/'
@@ -70,34 +71,58 @@ for key, vals in tagdict.items():
     df[key] = pd.Series(map(tagspec.tagfunc, 
                             soup.find_all(tagspec.tag)))
 
-# %% Attempt to extract weekly choices from first comment
-choicecomment = df[(df['name'] == 'Justin Eleff')
-                      & (df['submission'].str.lower().str.replace(
-                          ' ','').str.contains('-or-'))].iloc[0]['submission']
-choicecomment = choicecomment.replace('- OR -', '-or-')
-choicecomment = choicecomment.replace('- or -', '-or-')
-choicecomment = choicecomment.replace('-OR-', '-or-')
-choicecomment = choicecomment.split(':')[-1]
-choicecomment = choicecomment.replace(' and ', '').strip()
-
-choicerows = choicecomment.split(';')
-
+# %% Attempt to extract weekly choices from existing spreadsheet or first comment
 def extract_parens(tag):
     res = re.findall(r'\((.*?)\)', tag)
     return tuple(res)
-week_hosts = [extract_parens(row) for row in choicerows]
 
-# https://regex101.com/r/8efiNw/1
-choicerows = [re.sub(r'\([^)]*\)', '', row).strip() for row in choicerows]
-choicerows = [row.split('-or-') for row in choicerows]
+def extract_choices_from_comments(df):
+    choicecomment = df[(df['name'] == 'Justin Eleff')
+                          & (df['submission'].str.lower().str.replace(
+                              ' ','').str.contains('-or-'))].iloc[0]['submission']
+    choicecomment = choicecomment.replace('- OR -', '-or-')
+    choicecomment = choicecomment.replace('- or -', '-or-')
+    choicecomment = choicecomment.replace('-OR-', '-or-')
+    choicecomment = choicecomment.split(':')[-1]
+    choicecomment = choicecomment.replace(' and ', '').strip()
+    choicerows = choicecomment.split(';')
+    
+    week_hosts = [extract_parens(row) for row in choicerows]
 
-# choices that do not involve exactly two options will have to be built manually
-# TODO: check for a _corrected .xlsx and read choices (and partial rows) from it
-WEEK_CHOICES = [(row[0].strip(), row[1].strip()) for row in choicerows 
-                if (len(row) == 2) ]
+    # https://regex101.com/r/8efiNw/1
+    choicerows = [re.sub(r'\([^)]*\)', '', row).strip() for row in choicerows]
+    choicerows = [row.split('-or-') for row in choicerows]
+    
+    # choices that do not involve exactly two options will have to be built manually
+    week_choices = [(row[0].strip(), row[1].strip()) for row in choicerows 
+                    if (len(row) == 2) ]
+    
+    if len(week_choices) < len (choicerows):
+        warnings.warn("Some choices were unable to be parsed and must be built manually.")
 
-if len(WEEK_CHOICES) < len (choicerows):
-    warnings.warn("Some choices were unable to be parsed and must be built manually.")
+    return week_choices, week_hosts
+
+def extract_choices_from_spreadsheet(filename):
+    df_choice_from_sheet = pd.read_excel(filename, sheet_name='weekly choices')
+    df_choice_from_sheet.fillna(value='', inplace=True)
+    week_choices = [tuple(df_choice_from_sheet[colname])
+                    for colname in df_choice_from_sheet.columns
+                    if 'choice' in colname]
+    week_hosts = [tuple(df_choice_from_sheet[colname])
+                    for colname in df_choice_from_sheet.columns
+                    if 'host' in colname]
+    return week_choices, week_hosts
+
+choice_filename = f'{DATA_DIR}sbd_w{WEEK_NUM}_{YEAR}_choices.xlsx'
+WEEK_CHOICES, week_hosts = (extract_choices_from_spreadsheet(choice_filename)
+                            if os.path.isfile(choice_filename)
+                            else extract_choices_from_comments(df))
+# clean these up
+def row_cleanup(row):
+    return tuple(item.strip() for item in row if item)
+    
+WEEK_CHOICES = [row_cleanup(choicerow) for choicerow in WEEK_CHOICES]
+week_hosts = [row_cleanup(hostrow) for hostrow in week_hosts]
 
 # %% Populate dataframe with matched choices
 # https://stackoverflow.com/questions/17740833/checking-fuzzy-approximate-substring-existing-in-a-longer-string-in-python
@@ -119,7 +144,6 @@ for i, choices in enumerate(WEEK_CHOICES):
         choice_results.append(res)
     df[f'pick_{i+1}'] = pd.Series(result[0] if result else None for result in choice_results)
     df[f'match_{i+1}'] = pd.Series(result[1] if result else None for result in choice_results)
-
 
 # %% construct dataframe with choice options
 df_choices = pd.DataFrame()

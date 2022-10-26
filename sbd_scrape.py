@@ -173,7 +173,8 @@ df_combo[combo_choice_cols] = pd.DataFrame(df_combo['combo'].tolist(),
 
 # %% construct weekly info df for export to spreadsheet
 df_weeklyinfo = pd.DataFrame([
-    ['Week', WEEK_NUM], ['Year', YEAR], ['URL', WEEK_URL]], 
+    ['Week', str(WEEK_NUM)], ['Year', YEAR], ['Month', MONTH], ['Day', DAY], 
+    ['URL', WEEK_URL]], 
     columns=['attribute','value'])
 
 # %% Export to spreadsheet

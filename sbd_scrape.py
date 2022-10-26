@@ -15,13 +15,16 @@ from thefuzz import fuzz
 from thefuzz import process
 import warnings
 
+DATA_DIR = './data/'
 # YEAR = 2022
 # WEEK_NUM = 5
 # WEEK_URL = 'https://fantasyindex.com/2022/10/04/podcast/october-4-episode-of-the-fantasy-index-podcast'
 # WEEK_NUM = 6
 # WEEK_URL = 'https://fantasyindex.com/2022/10/11/podcast/october-11-episode-of-the-fantasy-index-podcast'
-WEEK_NUM = 7
-WEEK_URL = 'https://fantasyindex.com/2022/10/18/podcast/october-18-episode-of-the-fantasy-index-podcast'
+# WEEK_NUM = 7
+# WEEK_URL = 'https://fantasyindex.com/2022/10/18/podcast/october-18-episode-of-the-fantasy-index-podcast'
+WEEK_NUM = 8
+WEEK_URL = 'https://fantasyindex.com/2022/10/25/podcast/october-25-episode-of-the-fantasy-index-podcast'
 date_res = re.search(r'https:\/\/fantasyindex\.com\/(\d+)\/(\d+)\/(\d+)\/.*', 
                      WEEK_URL)
 if date_res:
@@ -157,8 +160,6 @@ export_cols = (['id', 'name', 'location']
 df_export = df[export_cols].copy()
 df_export.sort_values(by='combo_id', inplace=True)
 
-writer = pd.ExcelWriter(f'sbd_w{WEEK_NUM}_{YEAR}.xlsx')
-
 # https://stackoverflow.com/questions/17326973/is-there-a-way-to-auto-adjust-excel-column-widths-with-pandas-excelwriter
 def export_df_to_sheet(writer, df, sheet_name, include_index=False):
     df.to_excel(writer, sheet_name=sheet_name, index=include_index, na_rep='')
@@ -167,9 +168,9 @@ def export_df_to_sheet(writer, df, sheet_name, include_index=False):
         col_idx = df.columns.get_loc(column)
         writer.sheets[sheet_name].set_column(col_idx, col_idx, column_length)
 
-export_df_to_sheet(writer, df_export, sheet_name='submissions')
-export_df_to_sheet(writer, df_choices, sheet_name='weekly choices')
-export_df_to_sheet(writer, df_combo, sheet_name='combos')
-export_df_to_sheet(writer, df_weeklyinfo, sheet_name='weekly info')
+with pd.ExcelWriter(f'{DATA_DIR}sbd_w{WEEK_NUM}_{YEAR}.xlsx') as writer:
+    export_df_to_sheet(writer, df_export, sheet_name='submissions')
+    export_df_to_sheet(writer, df_choices, sheet_name='weekly choices')
+    export_df_to_sheet(writer, df_combo, sheet_name='combos')
+    export_df_to_sheet(writer, df_weeklyinfo, sheet_name='weekly info')
 
-writer.save()

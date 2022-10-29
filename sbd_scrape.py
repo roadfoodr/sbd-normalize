@@ -177,13 +177,26 @@ df_weeklyinfo = pd.DataFrame([
     ['URL', WEEK_URL]], 
     columns=['attribute','value'])
 
-# %% Export to spreadsheet
+# %% Final formatting of entries for export
 export_cols = (['id', 'name', 'location']
                + [f'pick_{i}' for i in range(1, len(WEEK_CHOICES)+1)]
                + ['combo_id', 'submission', 'time'])
 
 df_export = df[export_cols].copy()
 df_export.sort_values(by='combo_id', inplace=True)
+
+# %% If we have "corrected" rows from manual edit of previous scrape, 
+#    read and use them instead of matching rows that we just (re)scraped
+corrected_filename = f'{DATA_DIR}sbd_w{WEEK_NUM}_{YEAR}_corrected.xlsx'
+if os.path.isfile(corrected_filename):
+    df_entries = pd.read_excel(corrected_filename, sheet_name='submissions')
+
+    df_export = pd.concat([df_entries, df_export], 
+                           axis='index', ignore_index=True)
+    df_export.drop_duplicates(subset='id', keep='first', inplace=True)
+    df_export.sort_values(by='combo_id', inplace=True)
+    
+# %% Export to spreadsheet
 
 # https://stackoverflow.com/questions/17326973/is-there-a-way-to-auto-adjust-excel-column-widths-with-pandas-excelwriter
 def export_df_to_sheet(writer, df, sheet_name, include_index=False):
@@ -198,4 +211,3 @@ with pd.ExcelWriter(f'{DATA_DIR}sbd_w{WEEK_NUM}_{YEAR}.xlsx') as writer:
     export_df_to_sheet(writer, df_choices, sheet_name='weekly choices')
     export_df_to_sheet(writer, df_combo, sheet_name='combos')
     export_df_to_sheet(writer, df_weeklyinfo, sheet_name='weekly info')
-

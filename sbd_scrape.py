@@ -15,6 +15,8 @@ from thefuzz import fuzz
 from thefuzz import process
 import os.path, argparse
 import warnings
+import math
+from xlsxwriter.utility import xl_range
 
 DATA_DIR = './data/'
 
@@ -169,7 +171,7 @@ def main(WEEK_NUM, WEEK_URL):
     df_combo = pd.DataFrame.from_dict(combo_dict, orient='index',
                                       columns=['combo_id']).reset_index()
     df_combo.columns = ['combo', 'combo_id']
-    df_combo = df_combo[['combo_id', 'combo']]
+    df_combo = df_combo[['combo', 'combo_id']]
     
     combo_choice_cols = [f'choice_{i}' for i in range(1, len(WEEK_CHOICES)+1)]
     df_combo[combo_choice_cols] = pd.DataFrame(df_combo['combo'].tolist(), 
@@ -182,7 +184,7 @@ def main(WEEK_NUM, WEEK_URL):
         columns=['attribute','value'])
     
     # %% Final formatting of entries for export
-    export_cols = (['id', 'name', 'location']
+    export_cols = (['id', 'name', 'location', 'combo']
                    + [f'pick_{i}' for i in range(1, len(WEEK_CHOICES)+1)]
                    + ['combo_id', 'submission', 'time'])
     
@@ -208,8 +210,37 @@ def main(WEEK_NUM, WEEK_URL):
         for column in df:
             column_length = max(df[column].astype(str).map(len).max(), len(column))
             col_idx = df.columns.get_loc(column)
-            writer.sheets[sheet_name].set_column(col_idx, col_idx, column_length)
-    
+
+            # special cases: formula columns
+            if sheet_name == 'submissions' and column == 'combo':
+                for row_idx in range(1, len(df[column])+1):
+                    cell_range = xl_range(
+                        row_idx, col_idx+1, row_idx, col_idx+len(WEEK_CHOICES))
+                    cell_val = df.iloc[row_idx-1, col_idx]
+                    # print(f'{cell_val=}')
+                    writer.sheets[sheet_name].write_formula(
+                        row_idx, col_idx,
+                        f'="(\'" & _xlfn.TEXTJOIN("\', \'", 1, {cell_range}) & "\')"',
+                        None, cell_val)
+
+            if sheet_name == 'submissions' and column == 'combo_id':
+                for row_idx in range(1, len(df[column])+1):
+                    cell_val = df.iloc[row_idx-1, col_idx]
+                    cell_val = '' if math.isnan(cell_val) else int(cell_val)
+
+                    writer.sheets[sheet_name].write_formula(
+                        row_idx, col_idx,
+                        f'=VLOOKUP($D${row_idx+1}, combos!$A:$B, 2, 0)',
+                        None, cell_val)
+
+            # special case: hidden column
+            if column == 'combo':
+                writer.sheets[sheet_name].set_column(
+                    col_idx, col_idx, column_length, None, {'hidden': 1})
+            else:
+                writer.sheets[sheet_name].set_column(col_idx, col_idx, column_length)
+
+
     with pd.ExcelWriter(f'{BASE_FILENAME}.xlsx',
                         engine='xlsxwriter') as writer:
         export_df_to_sheet(writer, df_export, sheet_name='submissions')
@@ -217,6 +248,7 @@ def main(WEEK_NUM, WEEK_URL):
         export_df_to_sheet(writer, df_combo, sheet_name='combos')
         export_df_to_sheet(writer, df_weeklyinfo, sheet_name='weekly info')
 
+    print(f'{BASE_FILENAME}.xlsx exported')
 
 # %% End main()
 

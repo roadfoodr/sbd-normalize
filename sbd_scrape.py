@@ -8,7 +8,7 @@ Created on Thu Oct  6 13:48:40 2022
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
-import re
+import re, string
 from collections import namedtuple
 import itertools
 from thefuzz import fuzz
@@ -96,7 +96,9 @@ def main(WEEK_NUM, WEEK_URL):
         week_hosts = [extract_parens(row) for row in choicerows]
     
         # https://regex101.com/r/8efiNw/1
-        choicerows = [re.sub(r'\([^)]*\)', '', row).strip() for row in choicerows]
+        choicerows = [
+            re.sub(r'\([^)]*\)', '', row).strip(string.punctuation).strip()
+            for row in choicerows]
         choicerows = [row.split('-or-') for row in choicerows]
         
         # choices that do not involve exactly two options will have to be built manually
@@ -113,10 +115,10 @@ def main(WEEK_NUM, WEEK_URL):
         df_choice_from_sheet.fillna(value='', inplace=True)
         week_choices = [tuple(df_choice_from_sheet[colname])
                         for colname in df_choice_from_sheet.columns
-                        if 'choice' in colname]
+                        if 'choice' in colname.lower()]
         week_hosts = [tuple(df_choice_from_sheet[colname])
                         for colname in df_choice_from_sheet.columns
-                        if 'host' in colname]
+                        if 'host' in colname.lower()]
         return week_choices, week_hosts
     
     choice_filename = f'{BASE_FILENAME}_choices.xlsx'
@@ -196,6 +198,9 @@ def main(WEEK_NUM, WEEK_URL):
     corrected_filename = f'{BASE_FILENAME}_corrected.xlsx'
     if os.path.isfile(corrected_filename):
         df_entries = pd.read_excel(corrected_filename, sheet_name='submissions')
+        if 'combo' not in df_entries.columns:
+            df_entries['combo'] = ''
+        df_entries=df_entries[export_cols]
     
         df_export = pd.concat([df_entries, df_export], 
                                axis='index', ignore_index=True)

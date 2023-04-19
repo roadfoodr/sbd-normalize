@@ -74,4 +74,20 @@ for fn in filenames:
 
 # TODO: include weekly number of possible combos in choices_all?
 # TODO: include weekly URL in dfs?
+# TODO: include "weighting" {-1, 1} to allow for "low score" choices?
+
+# %% Save results
+first_week_string = (f"{df_choices_all.iloc[0]['year']}"
+                     f"w{df_choices_all.iloc[0]['week']}")
+last_week_string = (f"{df_choices_all.iloc[-1]['year']}"
+                     f"w{df_choices_all.iloc[-1]['week']}")
+df_choices_all.to_excel(f"{DATA_DIR}sbd_choices"
+                         f"_{first_week_string}"
+                         f"-{last_week_string}.xlsx",
+                        index=False)
+df_entries_all.to_excel(f"{DATA_DIR}sbd_entries"
+                         f"_{first_week_string}"
+                         f"-{last_week_string}.xlsx",
+                        index=False)
+
 
